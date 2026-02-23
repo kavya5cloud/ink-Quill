@@ -51,27 +51,46 @@ declare global {
 const AdSenseUnit = ({ side }: { side: 'left' | 'right' }) => {
   const clientId = (import.meta as any).env.VITE_ADSENSE_CLIENT_ID;
   const slot = side === 'left' ? (import.meta as any).env.VITE_ADSENSE_SLOT_LEFT : (import.meta as any).env.VITE_ADSENSE_SLOT_RIGHT;
+  const isConfigured = clientId && clientId.indexOf('VITE_ADSENSE_CLIENT_ID') === -1;
+  const hasSlot = slot && slot.indexOf('VITE_ADSENSE_SLOT') === -1;
   
   useEffect(() => {
-    if (clientId && slot) {
+    if (isConfigured && hasSlot) {
       try {
         (window.adsbygoogle = window.adsbygoogle || []).push({});
       } catch (e) {
         console.error("AdSense error:", e);
       }
     }
-  }, [clientId, slot]);
+  }, [isConfigured, hasSlot]);
 
-  if (!clientId || !slot) {
+  if (!isConfigured) {
     return (
       <div className="bg-zinc-50 border border-black/5 rounded-2xl p-4 h-[600px] flex flex-col items-center justify-center text-center gap-4">
         <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-300">
           <Sparkles size={20} />
         </div>
         <div className="text-xs text-zinc-400 font-medium">
-          Google Ad Placement<br/>
-          <span className="opacity-50">(160x600)</span>
+          AdSense Not Configured<br/>
+          <span className="opacity-50 text-[10px]">Add VITE_ADSENSE_CLIENT_ID</span>
         </div>
+      </div>
+    );
+  }
+
+  if (!hasSlot) {
+    return (
+      <div className="bg-emerald-50/30 border border-emerald-500/10 rounded-2xl p-4 h-[600px] flex flex-col items-center justify-center text-center gap-4">
+        <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600">
+          <Clock size={20} />
+        </div>
+        <div className="text-xs text-emerald-700 font-medium">
+          Verification Active<br/>
+          <span className="opacity-60 text-[10px]">Waiting for Ad Units (Slots)</span>
+        </div>
+        <p className="text-[10px] text-emerald-600/70 px-4">
+          Google is reviewing your site. Once approved, you can create "Display Ads" and add the Slot IDs.
+        </p>
       </div>
     );
   }
@@ -112,17 +131,6 @@ export default function App() {
   useEffect(() => {
     if (isEntered) {
       fetchPosts();
-      
-      // Load AdSense Script if client ID is present
-      const clientId = (import.meta as any).env.VITE_ADSENSE_CLIENT_ID;
-      if (clientId && !document.getElementById('adsense-script')) {
-        const script = document.createElement('script');
-        script.id = 'adsense-script';
-        script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${clientId}`;
-        script.async = true;
-        script.crossOrigin = "anonymous";
-        document.head.appendChild(script);
-      }
     }
   }, [isEntered]);
 
