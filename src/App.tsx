@@ -42,21 +42,61 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+declare global {
+  interface Window {
+    adsbygoogle: any[];
+  }
+}
+
+const AdSenseUnit = ({ side }: { side: 'left' | 'right' }) => {
+  const clientId = (import.meta as any).env.VITE_ADSENSE_CLIENT_ID;
+  const slot = side === 'left' ? (import.meta as any).env.VITE_ADSENSE_SLOT_LEFT : (import.meta as any).env.VITE_ADSENSE_SLOT_RIGHT;
+  
+  useEffect(() => {
+    if (clientId && slot) {
+      try {
+        (window.adsbygoogle = window.adsbygoogle || []).push({});
+      } catch (e) {
+        console.error("AdSense error:", e);
+      }
+    }
+  }, [clientId, slot]);
+
+  if (!clientId || !slot) {
+    return (
+      <div className="bg-zinc-50 border border-black/5 rounded-2xl p-4 h-[600px] flex flex-col items-center justify-center text-center gap-4">
+        <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-300">
+          <Sparkles size={20} />
+        </div>
+        <div className="text-xs text-zinc-400 font-medium">
+          Google Ad Placement<br/>
+          <span className="opacity-50">(160x600)</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white border border-black/5 rounded-2xl overflow-hidden min-h-[600px]">
+      <ins
+        className="adsbygoogle"
+        style={{ display: 'block' }}
+        data-ad-client={clientId}
+        data-ad-slot={slot}
+        data-ad-format="auto"
+        data-full-width-responsive="true"
+      />
+    </div>
+  );
+};
+
 const AdColumn = ({ side }: { side: 'left' | 'right' }) => (
   <div className={cn(
     "hidden xl:flex flex-col gap-4 w-48 sticky top-24 h-fit",
     side === 'left' ? "mr-8" : "ml-8"
   )}>
     <div className="text-[10px] uppercase tracking-widest font-bold text-zinc-300 mb-2">Advertisement</div>
-    <div className="bg-zinc-50 border border-black/5 rounded-2xl p-4 h-[600px] flex flex-col items-center justify-center text-center gap-4">
-      <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-300">
-        <Sparkles size={20} />
-      </div>
-      <div className="text-xs text-zinc-400 font-medium">
-        Google Ad Placement<br/>
-        <span className="opacity-50">(160x600)</span>
-      </div>
-    </div>
+    <AdSenseUnit side={side} />
   </div>
 );
 
@@ -72,6 +112,17 @@ export default function App() {
   useEffect(() => {
     if (isEntered) {
       fetchPosts();
+      
+      // Load AdSense Script if client ID is present
+      const clientId = (import.meta as any).env.VITE_ADSENSE_CLIENT_ID;
+      if (clientId && !document.getElementById('adsense-script')) {
+        const script = document.createElement('script');
+        script.id = 'adsense-script';
+        script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${clientId}`;
+        script.async = true;
+        script.crossOrigin = "anonymous";
+        document.head.appendChild(script);
+      }
     }
   }, [isEntered]);
 
