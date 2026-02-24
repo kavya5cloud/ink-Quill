@@ -4,19 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ink & Quill</title>
-    <script>
-      (function() {
-        const clientId = "%VITE_ADSENSE_CLIENT_ID%";
-        // Only load if the variable was actually replaced by Vite and isn't empty
-        if (clientId && clientId.indexOf('VITE_ADSENSE_CLIENT_ID') === -1) {
-          const script = document.createElement('script');
-          script.async = true;
-          script.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=" + clientId;
-          script.crossOrigin = "anonymous";
-          document.head.appendChild(script);
-        }
-      })();
-    </script>
+    <!-- AdSense verification: keep this exact script tag so Google can see it without running JS -->
+    <script
+      async
+      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=%VITE_ADSENSE_CLIENT_ID%"
+      crossorigin="anonymous"
+    ></script>
   </head>
   <body>
     <div id="root"></div>
