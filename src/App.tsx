@@ -361,7 +361,7 @@ export default function App() {
             <span className="font-serif text-xl font-bold tracking-tight">Ink & Quill</span>
           </div>
           <div className="flex items-center gap-6">
-            <form onSubmit={handleAuthSubmit} className="hidden md:flex items-center gap-2 text-xs">
+            <form onSubmit={handleAuthSubmit} className="flex items-center gap-2 text-xs flex-wrap justify-end">
               <input
                 type="email"
                 placeholder="you@example.com"

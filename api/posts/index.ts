@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { getUserByRequest } from '../_lib/auth';
 import { ensureSchema, sql } from '../_lib/db';
+import { readJsonBody } from '../_lib/request';
 
 export default async function handler(req: any, res: any) {
   if (!process.env.POSTGRES_URL) {
@@ -25,7 +26,8 @@ export default async function handler(req: any, res: any) {
     const user = await getUserByRequest(req);
     if (!user) return res.status(401).json({ error: 'Login required' });
 
-    const { id, title, content, excerpt, status } = req.body || {};
+    const body = await readJsonBody<{ id?: string; title?: string; content?: string; excerpt?: string; status?: string }>(req);
+    const { id, title, content, excerpt, status } = body;
     if (!title || !content) {
       return res.status(400).json({ error: 'Title and content are required' });
     }
