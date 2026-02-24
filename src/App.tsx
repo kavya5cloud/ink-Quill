@@ -232,7 +232,15 @@ export default function App() {
         await fetchPosts();
         setView('list');
         setEditingPost(null);
+      } else {
+        const error = await res.json().catch(() => ({}));
+        const fallback = statusOverride === 'published' ? 'Failed to publish story.' : 'Failed to save story.';
+        alert(error.error || fallback);
+        console.error("Save failed:", { status: res.status, error });
       }
+    } catch (e) {
+      console.error("Save request error:", e);
+      alert("Could not reach server. Check your deployment/API setup.");
     } finally {
       setIsSaving(false);
     }
