@@ -126,18 +126,71 @@ export default function App() {
   const [editingPost, setEditingPost] = useState<Post | NewPost | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isPolishing, setIsPolishing] = useState(false);
   const [view, setView] = useState<'list' | 'editor'>('list');
+  const [currentUser, setCurrentUser] = useState<{ id: string; email: string } | null>(null);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
 
   useEffect(() => {
     if (isEntered) {
-      fetchPosts();
+      fetchCurrentUser().then(() => {
+        fetchPosts();
+      });
     }
   }, [isEntered]);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await fetch('/api/auth/me');
+      if (res.ok) {
+        const user = await res.json();
+        setCurrentUser(user);
+      } else {
+        setCurrentUser(null);
+      }
+    } catch {
+      setCurrentUser(null);
+    }
+  };
 
   const fetchPosts = async () => {
     const res = await fetch('/api/posts');
     const data = await res.json();
     setPosts(data);
+  };
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: authEmail, password: authPassword })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'Authentication failed');
+        return;
+      }
+      const user = await res.json();
+      setCurrentUser(user);
+      setAuthPassword('');
+      await fetchPosts();
+    } catch (e) {
+      console.error(e);
+      alert('Authentication error. Check console for details.');
+    }
+  };
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    setCurrentUser(null);
+    setPosts([]);
+    setEditingPost(null);
+    setView('list');
   };
 
   const handleCreate = () => {
@@ -220,6 +273,23 @@ export default function App() {
     }
   };
 
+  const handlePolish = async () => {
+    if (!editingPost?.content) {
+      alert('Add some content first to polish.');
+      return;
+    }
+    setIsPolishing(true);
+    try {
+      const polished = await gemini.polishContent(editingPost.content);
+      setEditingPost(prev => prev ? { ...prev, content: polished } : null);
+    } catch (e) {
+      console.error(e);
+      alert('Failed to polish content.');
+    } finally {
+      setIsPolishing(false);
+    }
+  };
+
   if (!isEntered) {
     return (
       <div className="min-h-screen bg-[#FDFCFB] flex items-center justify-center p-6">
@@ -282,8 +352,51 @@ export default function App() {
             </div>
             <span className="font-serif text-xl font-bold tracking-tight">Ink & Quill</span>
           </div>
-          
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
+            <form onSubmit={handleAuthSubmit} className="hidden md:flex items-center gap-2 text-xs">
+              <input
+                type="email"
+                placeholder="you@example.com"
+                value={authEmail}
+                onChange={(e) => setAuthEmail(e.target.value)}
+                className="px-2 py-1 text-xs border border-black/10 rounded-md bg-zinc-50"
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                value={authPassword}
+                onChange={(e) => setAuthPassword(e.target.value)}
+                className="px-2 py-1 text-xs border border-black/10 rounded-md bg-zinc-50"
+              />
+              <button
+                type="submit"
+                className="px-3 py-1 rounded-full bg-zinc-900 text-white text-[11px] font-semibold"
+              >
+                {authMode === 'login' ? 'Log In' : 'Sign Up'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
+                className="text-[11px] text-zinc-400 hover:text-zinc-700"
+              >
+                {authMode === 'login' ? 'New here?' : 'Have an account?'}
+              </button>
+              {currentUser && (
+                <div className="flex items-center gap-2 ml-3">
+                  <span className="text-[11px] text-zinc-500 max-w-[140px] truncate">
+                    {currentUser.email}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="text-[11px] text-zinc-400 hover:text-red-600"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
+            </form>
+
             {view === 'list' ? (
               <button 
                 onClick={handleCreate}
@@ -440,9 +553,14 @@ export default function App() {
                       {isGenerating ? 'Generating Outline...' : 'Generate AI Outline'}
                     </button>
                     <div className="w-px h-4 bg-zinc-200 mx-2" />
-                    <button className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-500 hover:text-black transition-colors">
+                    <button 
+                      type="button"
+                      onClick={handlePolish}
+                      disabled={isPolishing}
+                      className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-500 hover:text-black transition-colors disabled:opacity-50"
+                    >
                       <Wand2 size={14} />
-                      Polish Content
+                      {isPolishing ? 'Polishing...' : 'Polish Content'}
                     </button>
                   </div>
 

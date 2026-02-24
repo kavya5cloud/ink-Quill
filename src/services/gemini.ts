@@ -17,6 +17,15 @@ export async function generateOutline(topic: string) {
   return response.text;
 }
 
+export async function polishContent(content: string) {
+  const ai = getAI();
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: `Rewrite and polish the following blog post content. Improve clarity, flow, and style but keep the original meaning and voice. Return Markdown only.\n\n${content}`,
+  });
+  return response.text;
+}
+
 export async function expandSection(section: string, context: string) {
   const ai = getAI();
   const response = await ai.models.generateContent({
