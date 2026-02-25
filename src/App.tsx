@@ -132,6 +132,13 @@ export default function App() {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
+  const eligiblePublishedPosts = posts.filter((post) => {
+    if (post.status !== 'published') return false;
+    const contentLength = (post.content || '').trim().length;
+    const excerptLength = (post.excerpt || '').trim().length;
+    return contentLength >= 300 || excerptLength >= 120;
+  });
+  const shouldShowAds = view === 'list' && eligiblePublishedPosts.length >= 3;
 
   useEffect(() => {
     if (isEntered) {
@@ -143,7 +150,7 @@ export default function App() {
 
   const fetchCurrentUser = async () => {
     try {
-      const res = await fetch('/api/auth/me');
+      const res = await fetch('/api/auth/me', { credentials: 'include' });
       if (res.ok) {
         const user = await res.json();
         setCurrentUser(user);
@@ -156,7 +163,7 @@ export default function App() {
   };
 
   const fetchPosts = async () => {
-    const res = await fetch('/api/posts');
+    const res = await fetch('/api/posts', { credentials: 'include' });
     const data = await res.json();
     setPosts(data);
   };
@@ -168,11 +175,19 @@ export default function App() {
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email: authEmail, password: authPassword })
       });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        alert(err.error || 'Authentication failed');
+        const raw = await res.text();
+        let message = '';
+        try {
+          const parsed = JSON.parse(raw);
+          message = parsed?.error || '';
+        } catch {
+          message = raw;
+        }
+        alert(`Authentication failed (${res.status})${message ? `: ${message}` : ''}`);
         return;
       }
       const user = await res.json();
@@ -186,7 +201,7 @@ export default function App() {
   };
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     setCurrentUser(null);
     setPosts([]);
     setEditingPost(null);
@@ -225,6 +240,7 @@ export default function App() {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(postToSave)
       });
       
@@ -233,10 +249,17 @@ export default function App() {
         setView('list');
         setEditingPost(null);
       } else {
-        const error = await res.json().catch(() => ({}));
+        const raw = await res.text();
+        let message = '';
+        try {
+          const parsed = JSON.parse(raw);
+          message = parsed?.error || '';
+        } catch {
+          message = raw;
+        }
         const fallback = statusOverride === 'published' ? 'Failed to publish story.' : 'Failed to save story.';
-        alert(error.error || fallback);
-        console.error("Save failed:", { status: res.status, error });
+        alert(`${fallback} (${res.status})${message ? `: ${message}` : ''}`);
+        console.error("Save failed:", { status: res.status, message });
       }
     } catch (e) {
       console.error("Save request error:", e);
@@ -250,7 +273,7 @@ export default function App() {
     console.log("Deleting post:", id);
     if (!confirm('Are you sure you want to delete this post?')) return;
     try {
-      const res = await fetch(`/api/posts/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/posts/${id}`, { method: 'DELETE', credentials: 'include' });
       if (res.ok) {
         console.log("Post deleted successfully");
         await fetchPosts();
@@ -455,7 +478,7 @@ export default function App() {
       </header>
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-12 flex justify-center">
-        <AdColumn side="left" />
+        {shouldShowAds && <AdColumn side="left" />}
         
         <div className="flex-1 max-w-3xl w-full">
           <AnimatePresence mode="wait">
@@ -595,7 +618,7 @@ export default function App() {
           </AnimatePresence>
         </div>
 
-        <AdColumn side="right" />
+        {shouldShowAds && <AdColumn side="right" />}
       </main>
 
       <footer className="py-12 border-t border-black/5 bg-zinc-50/50">
